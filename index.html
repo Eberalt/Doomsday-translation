@@ -1,0 +1,1313 @@
+<!--
+  ============================================================================
+  Polskie tłumaczenie interaktywnego eksploratora
+  „How to Mentally Calculate the Day of the Week for Any Date"
+
+  Oryginał (autor, projekt graficzny, kod):
+    Tinker & See — https://tinkerandsee.com/weekday/
+    Wsparcie autora: https://ko-fi.com/tinkerandsee
+
+  Tłumaczenie: Waldemar, 2026
+
+  TODO PRZED PUBLIKACJĄ: uzupełnić licencję oryginału.
+    Sprawdź stopkę https://tinkerandsee.com/weekday/ oraz https://tinkerandsee.com/.
+    Jeśli licencji nie ma, napisz do autora po zgodę — tłumaczenie jest
+    utworem zależnym i publikacja bez zgody nie jest legalna.
+    Licencja oryginału: ......
+    Licencja tłumaczenia: ......
+
+  Zakres zmian wobec oryginału:
+    - tłumaczenie wszystkich tekstów (HTML + stringi w JavaScripcie)
+    - zapis daty dzień/miesiąc zamiast miesiąc/dzień
+    - tydzień zaczyna się od poniedziałku (kalendarze i zegar dni)
+    - polskie formy liczby mnogiej przez Intl.PluralRules('pl')
+    - odmiana dni tygodnia przez przypadki (mianownik / „w" / „od")
+    - „Doomsday" tłumaczone jako „dzień-klucz"
+    - warstwa CSS skopiowana bez zmian
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jak w głowie policzyć dzień tygodnia dla dowolnej daty — reguła Doomsday Conwaya</title>
+<meta name="description" content="Poznaj krok po kroku regułę Doomsday Johna Conwaya i podawaj dzień tygodnia dowolnej daty z pamięci — interaktywna strona dla dzieci i ciekawych dorosłych.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+
+<!-- atrybucja dla wyszukiwarek i czytników ekranu -->
+<meta name="author" content="Tinker &amp; See">
+<meta name="translator" content="Waldemar">
+
+<!-- para językowa: to jest polska wersja strony angielskiej.
+     UWAGA: nie używamy rel="canonical" na oryginał — to kazałoby Google
+     wyrzucić tę stronę z wyników jako duplikat. -->
+<link rel="alternate" hreflang="en" href="https://tinkerandsee.com/weekday/">
+<link rel="alternate" hreflang="pl" href="https://doomsday.cieslik.ovh/">
+
+<!-- Open Graph: wygląd linku wklejonego na Discordzie, Facebooku, Slacku -->
+<meta property="og:type" content="article">
+<meta property="og:locale" content="pl_PL">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="Jak w głowie policzyć dzień tygodnia dla dowolnej daty">
+<meta property="og:description" content="Interaktywna nauka reguły Doomsday Johna Conwaya. Bez kalendarza, bez telefonu — dwa sekrety i trochę praktyki.">
+<meta property="og:url" content="https://doomsday.cieslik.ovh/">
+<style>
+  :root{
+    --bg:#FFF8EC; --card:#FFFFFF; --ink:#3A2E2A; --soft:#8A7A6E;
+    --coral:#FF6B57; --teal:#00A896; --gold:#FFC53D; --purple:#7B5EA7;
+    --coral-soft:#FFE1DC; --teal-soft:#D6F2EE; --gold-soft:#FFF1CC; --purple-soft:#EAE3F5;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size:16px; line-height:1.5;
+  }
+  main{max-width:780px; margin:0 auto; padding:0 16px 80px}
+  header{text-align:center; padding:44px 16px 8px; max-width:780px; margin:0 auto}
+  h1{font-size:clamp(28px,5vw,44px); margin:0 0 6px; line-height:1.15}
+  h1 .hl{color:var(--coral)}
+  .subtitle{color:var(--soft); margin:0 0 18px; font-size:17px}
+  .badge-tray{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0 4px}
+  .badge{
+    width:52px; height:52px; border-radius:50%; background:#EFE6D6;
+    display:flex; align-items:center; justify-content:center; font-size:26px;
+    filter:grayscale(1); opacity:.38; border:2px dashed #D8C9B2; transition:all .5s;
+  }
+  .badge.earned{filter:none; opacity:1; background:var(--gold-soft); border:2px solid var(--gold);
+    transform:scale(1.08); box-shadow:0 3px 10px rgba(255,197,61,.5)}
+  section.card{
+    background:var(--card); border-radius:22px; padding:26px 26px 30px;
+    margin:34px 0; box-shadow:0 4px 20px rgba(90,70,40,.08); border:1px solid #F0E7D8;
+    scroll-margin-top:70px;
+  }
+  #partNav{
+    position:sticky; top:0; z-index:40; display:flex; gap:8px; justify-content:center;
+    flex-wrap:wrap; padding:10px 12px; background:rgba(255,248,236,.97);
+    border-bottom:2px solid #F0E7D8;
+  }
+  #partNav .pchip{font-size:14px; padding:6px 12px; background:#fff; color:var(--ink);
+    border:2px solid #E4D9C6; box-shadow:none; border-radius:999px; text-decoration:none;
+    line-height:1.5; cursor:pointer; font-family:inherit}
+  #partNav .pchip.current{background:var(--coral); border-color:var(--coral); color:#fff}
+  @media(max-width:640px){#partNav .pt{display:none}}
+  .part-chip{
+    display:inline-block; background:var(--ink); color:#fff; border-radius:999px;
+    padding:3px 14px; font-size:14px; letter-spacing:.5px; margin-bottom:8px;
+  }
+  section h2{margin:4px 0 10px; font-size:22px}
+  .story{font-size:16px}
+  .caption{
+    background:var(--gold-soft); border-left:5px solid var(--gold);
+    border-radius:10px; padding:12px 16px; margin:14px 0; min-height:52px;
+  }
+  svg{display:block; width:100%; height:auto; touch-action:none; user-select:none}
+  .svg-frame svg{max-height:48vh}
+  #clockSvg{max-width:330px; margin:0 auto}
+  .svg-frame{background:#FDFBF5; border:1px solid #EFE7D7; border-radius:16px; padding:8px; margin:12px 0}
+  button{
+    font-family:inherit; font-size:16px; padding:9px 20px; border-radius:999px;
+    border:none; background:var(--teal); color:#fff; cursor:pointer;
+    box-shadow:0 3px 0 #00806F; transition:transform .1s;
+  }
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(1px); box-shadow:0 1px 0 #00806F}
+  button:disabled{background:#C9BFB2; box-shadow:0 3px 0 #A99E90; cursor:default; transform:none}
+  button.alt{background:var(--coral); box-shadow:0 3px 0 #D14834}
+  button.alt:active{box-shadow:0 1px 0 #D14834}
+  button.ghost{background:#fff; color:var(--ink); border:2px solid #E4D9C6; box-shadow:0 3px 0 #E4D9C6}
+  button.day{padding:8px 12px; font-size:15px}
+  .btn-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0}
+  input[type=number]{
+    font-family:inherit; font-size:16px; padding:8px 12px; border-radius:12px;
+    border:2px solid #E4D9C6; width:100px; background:#fff; color:var(--ink);
+  }
+  input[type=text], input[type=date]{font-family:inherit; font-size:16px; padding:8px 12px;
+    border-radius:12px; border:2px solid #E4D9C6; background:#fff; color:var(--ink)}
+  .feedback{font-size:16px; min-height:24px; margin-top:6px}
+  .feedback.good{color:var(--teal)} .feedback.try{color:var(--coral)}
+  table.discoveries{border-collapse:collapse; width:100%; margin:14px 0; font-size:15px; text-align:center}
+  table.discoveries th, table.discoveries td{border:2px solid #F0E7D8; padding:6px}
+  table.discoveries th{font-size:13px}
+  th.c-gold{background:var(--gold-soft)} th.c-teal{background:var(--teal-soft)}
+  th.c-plain{background:#F7F1E5} th.c-coral{background:var(--coral-soft)}
+  .theorem-box{
+    background:linear-gradient(135deg,#FFF6DF,#FFEBC2); border:3px solid var(--gold);
+    border-radius:18px; padding:20px 22px; margin:16px 0; font-size:16px;
+  }
+  .theorem-box .big{font-size:21px; text-align:center; margin:12px 0}
+  .hidden{display:none !important}
+  .live-line{background:#F7F1E5; border-radius:12px; padding:10px 14px; margin:12px 0; font-size:16px}
+  .scrub{font-weight:bold; color:#C23A26; border-bottom:2px dashed #C23A26;
+    cursor:ew-resize; padding:0 3px; user-select:none; -webkit-user-select:none;
+    touch-action:none; white-space:nowrap}
+  .scrub::after{content:'⇄'; font-size:11px; margin-left:2px; opacity:.6}
+  .ref{cursor:pointer; border-bottom:2px dotted #C9B68F}
+  .ref:hover{background:#FFF3D6}
+  .svg-glow{
+    filter:drop-shadow(0 0 3px #FFC53D) drop-shadow(0 0 7px rgba(255,160,40,.9));
+    animation:hlpulse .55s ease-in-out infinite alternate;
+  }
+  @keyframes hlpulse{from{opacity:1}to{opacity:.35}}
+  /* mini month calendars */
+  .months{display:grid; grid-template-columns:repeat(auto-fill, minmax(158px, 1fr)); gap:10px; margin:12px 0}
+  .mon{background:#FDFBF5; border:1px solid #EFE7D7; border-radius:12px; padding:8px}
+  .mon h4{margin:0 0 4px; font-size:14px; text-align:center}
+  .mgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px}
+  .mgrid .dh{font-size:9px; color:var(--soft); text-align:center}
+  .mgrid .dc{
+    font-size:11px; text-align:center; padding:3px 0; border-radius:6px; cursor:pointer;
+    background:#fff; border:1px solid #F0E7D8; user-select:none;
+  }
+  .mgrid .dc:hover{background:var(--gold-soft)}
+  .mgrid .dc.sq{background:var(--gold); border-color:#A97800; font-weight:bold}
+  .mgrid .dc.flash{background:var(--teal-soft); border-color:var(--teal)}
+  .squad-chips{display:inline-flex; gap:6px; flex-wrap:wrap; margin:0}
+  .sgroup{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:5px 0}
+  .sglabel{font-size:13px; color:var(--soft); font-weight:bold; min-width:132px}
+  .schip{font-size:13px; padding:3px 10px; border-radius:999px; border:2px dashed #D8C9B2;
+    background:#fff; color:var(--soft); cursor:pointer; font-family:inherit; box-shadow:none}
+  .schip.got{border:2px solid var(--gold); background:var(--gold-soft); color:var(--ink); font-weight:bold}
+  .helper{background:var(--purple-soft); border-radius:12px; padding:10px 14px; margin:10px 0; font-size:15px}
+  .yearrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:16px; margin:8px 0}
+  .yearrow b.cursor{font-size:22px; color:var(--coral)}
+  details.blackbelt{background:var(--purple-soft); border-radius:14px; padding:12px 18px; margin:14px 0; font-size:15px}
+  details.blackbelt summary{cursor:pointer; font-weight:bold; color:var(--purple)}
+  .teach-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0}
+  @media(max-width:600px){.teach-grid{grid-template-columns:1fr}}
+  .teach-card{border:2px solid #F0E7D8; border-radius:16px; padding:14px 16px; font-size:15px}
+  .teach-card h3{margin:0 0 6px; font-size:17px}
+  .teach-card .say{background:#F7F1E5; border-radius:10px; padding:8px 12px; margin-top:8px; font-style:italic}
+  #certificate{
+    border:6px double var(--gold); border-radius:20px; padding:30px 26px; text-align:center;
+    background:linear-gradient(160deg,#FFFDF6,#FFF4D6); margin-top:16px;
+  }
+  #certificate h2{font-size:28px; margin:6px 0}
+  #certificate .cname{font-size:32px; color:var(--coral); margin:8px 0;
+    border-bottom:3px dotted var(--gold); display:inline-block; padding:0 20px}
+  #toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(120px);
+    background:var(--ink); color:#fff; padding:12px 24px; border-radius:999px;
+    font-family:inherit; font-size:16px; transition:transform .4s; z-index:50;
+    box-shadow:0 6px 20px rgba(0,0,0,.25); pointer-events:none;
+  }
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  .confetti-bit{position:fixed; font-size:24px; pointer-events:none; z-index:60; animation:fall 1.4s ease-in forwards}
+  @keyframes fall{0%{transform:translateY(0) rotate(0); opacity:1}100%{transform:translateY(240px) rotate(260deg); opacity:0}}
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  footer{text-align:center; color:var(--soft); font-size:14px; padding:20px; max-width:780px; margin:0 auto}
+  @media(max-width:520px){
+    body{font-size:15px}
+    main{padding:0 8px 60px}
+    section.card{padding:18px 12px 22px; margin:18px 0; border-radius:16px}
+    .svg-frame{padding:3px; margin:10px -4px; border-radius:10px}
+    .svg-frame svg{max-height:42vh}
+    header{padding:28px 10px 6px}
+    #partNav{flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start;
+      gap:6px; padding:7px 8px; scrollbar-width:none}
+    #partNav::-webkit-scrollbar{display:none}
+    #partNav .pchip{flex:0 0 auto; font-size:13px; padding:5px 10px}
+    #partNav .pchip:first-child{margin-left:auto}
+    #partNav .pchip:last-child{margin-right:auto}
+    .months{grid-template-columns:repeat(2, 1fr)}
+  }
+  @media print{
+    body.print-cert header, body.print-cert main section:not(#sec6),
+    body.print-cert footer, body.print-cert #sec6 > *:not(#certificate){display:none}
+  }
+
+  /* ============================================================
+     DESIGN REFRESH — tokens, type, elevation, motion, a11y
+     (append-only: later rules win, logic untouched)
+     ============================================================ */
+  :root{
+    --bg:#FBF8F2; --card:#FFFFFF;
+    --ink:#241F1B; --ink-2:#5B534C; --soft:#8A8078;
+    --line:#EFE8DC; --line-2:#E2D9C9;
+    --coral:#EF5A4C; --coral-ink:#C13B2D;
+    --teal:#0C9E8F;  --teal-ink:#0A7A6E;
+    --gold:#F2B22B;  --gold-ink:#9A6F05;
+    --purple:#6F5BC7;
+    --r-sm:12px; --r-md:16px; --r-lg:22px; --r-xl:28px;
+    --e-1:0 1px 2px rgba(62,46,26,.05), 0 3px 10px -3px rgba(62,46,26,.08);
+    --e-2:0 2px 4px rgba(62,46,26,.05), 0 14px 32px -14px rgba(62,46,26,.20);
+    --e-3:0 3px 6px rgba(62,46,26,.06), 0 24px 48px -20px rgba(62,46,26,.26);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:
+      radial-gradient(1200px 560px at 50% -260px, #FFF4DE 0%, rgba(255,244,222,0) 72%),
+      var(--bg);
+    color:var(--ink);
+    font-size:17px; line-height:1.62; letter-spacing:.003em;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+  main{max-width:768px; padding-bottom:96px}
+  ::selection{background:#FFE6A8; color:var(--ink)}
+
+  /* ---- type ---- */
+  h1{font-weight:800; letter-spacing:-.028em; line-height:1.06}
+  h2,h3,h4{font-weight:700; letter-spacing:-.016em; line-height:1.28}
+  section h2{font-size:clamp(21px,2.6vw,27px); margin:6px 0 12px}
+  .subtitle{font-size:clamp(16px,2vw,18.5px); color:var(--ink-2); line-height:1.5; max-width:34em; margin-inline:auto}
+  .story{font-size:17px; color:var(--ink-2); max-width:64ch}
+  .story b, .story strong{color:var(--ink); font-weight:650}
+  small{font-size:14.5px; color:var(--soft)}
+
+  /* ---- surfaces ---- */
+  section.card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl);
+    box-shadow:var(--e-1); padding:30px 32px 34px; margin:26px 0;
+  }
+  .part-chip{
+    background:rgba(36,31,27,.055); color:var(--ink-2);
+    font-size:11.5px; font-weight:750; letter-spacing:.10em; text-transform:uppercase;
+    padding:5px 12px; margin-bottom:10px;
+  }
+  .svg-frame{
+    background:linear-gradient(180deg,#FFFDF9,#FDFAF3);
+    border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:14px; margin:18px 0; box-shadow:inset 0 1px 0 #fff;
+  }
+  .caption{
+    background:linear-gradient(180deg,#FFFCF3,#FFF8E9);
+    border:1px solid #F4E5C2; border-left:4px solid var(--gold);
+    border-radius:var(--r-md); padding:14px 18px; margin:16px 0;
+    color:var(--ink); box-shadow:var(--e-1);
+  }
+  .theorem-box{
+    background:linear-gradient(165deg,#FFFCF2 0%,#FFF4DC 100%);
+    border:1px solid #EFD9A0; border-radius:var(--r-lg);
+    padding:24px 26px; box-shadow:var(--e-2); color:var(--ink);
+  }
+  .theorem-box .big{font-weight:750; letter-spacing:-.015em}
+  .theorem-box a{color:var(--teal-ink); font-weight:640; text-decoration:none;
+    border-bottom:1px solid rgba(10,122,110,.35); transition:border-color .16s var(--ease)}
+  .theorem-box a:hover{border-bottom-color:var(--teal-ink)}
+  .live-line{
+    background:#FBF7EE; border:1px solid var(--line); border-radius:var(--r-md);
+    padding:12px 16px; color:var(--ink-2);
+  }
+  .helper, .hint{border-radius:var(--r-md); border:1px solid #E4DCF2}
+  .challenge, .teach-card{
+    border:1px solid var(--line); border-radius:var(--r-lg); padding:20px 22px;
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .challenge:hover, .teach-card:hover{box-shadow:var(--e-1)}
+  .challenge.solved{border-color:#9FDCD2; background:#F5FCFB}
+  .teach-card .say{background:#FAF6EE; border-radius:var(--r-sm); color:var(--ink-2)}
+  details.blackbelt{border:1px solid #E4DCF2; border-radius:var(--r-lg); padding:14px 20px}
+  details.blackbelt summary{letter-spacing:-.01em}
+
+  /* ---- controls ---- */
+  button{
+    font-weight:640; letter-spacing:.004em; border-radius:999px;
+    padding:10px 20px; box-shadow:var(--e-1);
+    transition:transform .16s var(--ease), box-shadow .16s var(--ease),
+               background-color .16s var(--ease), border-color .16s var(--ease), opacity .16s var(--ease);
+  }
+  button:hover{transform:translateY(-1.5px); box-shadow:var(--e-2)}
+  button:active, button.alt:active, button.ghost:active{transform:translateY(0); box-shadow:var(--e-1)}
+  button:disabled{background:#EDE7DD; color:#A79C90; box-shadow:none; transform:none}
+  button.alt{background:var(--coral); box-shadow:0 1px 2px rgba(193,59,45,.18), 0 8px 20px -8px rgba(193,59,45,.5)}
+  button.alt:hover{background:#E64C3E; box-shadow:0 2px 6px rgba(193,59,45,.2), 0 14px 28px -10px rgba(193,59,45,.55)}
+  button.ghost{background:#fff; color:var(--ink); border:1px solid var(--line-2); box-shadow:var(--e-1)}
+  button.ghost:hover{border-color:var(--gold); background:#FFFDF7}
+  button.day{padding:9px 15px; font-variant-numeric:tabular-nums}
+  .btn-row{gap:12px; margin:16px 0}
+  input[type=number], input[type=text], input[type=date], input[type=email]{
+    border:1px solid var(--line-2); border-radius:14px; padding:10px 14px;
+    background:#fff; color:var(--ink); box-shadow:inset 0 1px 2px rgba(62,46,26,.04);
+    transition:border-color .16s var(--ease), box-shadow .16s var(--ease);
+  }
+  input:hover{border-color:#D5C9B4}
+  input:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 4px rgba(12,158,143,.14)}
+  input[type=range]{accent-color:var(--coral)}
+  :focus-visible{outline:2.5px solid var(--teal); outline-offset:3px; border-radius:10px}
+
+  /* ---- nav ---- */
+  #partNav{
+    background:rgba(251,248,242,.78);
+    -webkit-backdrop-filter:saturate(180%) blur(14px);
+    backdrop-filter:saturate(180%) blur(14px);
+    border-bottom:1px solid var(--line); padding:11px 12px; gap:7px;
+  }
+  #partNav .pchip{
+    background:rgba(255,255,255,.86); border:1px solid var(--line-2); color:var(--ink-2);
+    font-size:13.5px; font-weight:640; padding:7px 13px; box-shadow:none;
+    transition:all .16s var(--ease);
+  }
+  #partNav .pchip:hover{background:#fff; border-color:var(--gold); color:var(--ink); transform:translateY(-1px)}
+  #partNav .pchip.current{background:var(--ink); border-color:var(--ink); color:#fff; box-shadow:var(--e-1)}
+  #partNav .pchip.locked{opacity:.42}
+
+  /* ---- badges ---- */
+  .badge-tray{gap:11px; margin:16px 0 6px}
+  .badge{
+    width:46px; height:46px; font-size:22px; opacity:1;
+    background:rgba(36,31,27,.035); border:1px solid var(--line-2);
+    filter:grayscale(1) opacity(.42);
+    transition:transform .45s var(--ease), filter .45s var(--ease),
+               background-color .45s var(--ease), box-shadow .45s var(--ease), border-color .45s var(--ease);
+  }
+  .badge.earned{
+    filter:none; background:linear-gradient(180deg,#FFF8E6,#FFEFCC);
+    border:1px solid var(--gold); transform:scale(1.06);
+    box-shadow:0 4px 16px -4px rgba(242,178,43,.65);
+  }
+
+  /* ---- data ---- */
+  table.discoveries{border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums;
+    border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; font-size:15px}
+  table.discoveries th, table.discoveries td{border:none; border-bottom:1px solid var(--line); padding:9px 8px}
+  table.discoveries tbody tr:last-child td{border-bottom:none}
+  table.discoveries th{font-size:12px; letter-spacing:.03em; text-transform:uppercase; color:var(--ink-2); font-weight:700}
+
+  /* ---- feedback ---- */
+  .feedback{font-size:16px}
+  .feedback.good{color:var(--teal-ink)} .feedback.try{color:var(--coral-ink)}
+  #toast{
+    background:rgba(28,24,20,.94); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    border-radius:14px; padding:13px 22px; font-weight:600; font-size:15.5px;
+    box-shadow:0 12px 32px -8px rgba(0,0,0,.4);
+  }
+  #certificate{border:1px solid #EBD49A; border-radius:var(--r-xl); box-shadow:var(--e-2);
+    background:linear-gradient(165deg,#FFFDF7,#FFF6E2); padding:38px 30px}
+  #certificate h2{letter-spacing:-.02em}
+  footer{padding:36px 20px; font-size:14px}
+  footer a{color:var(--teal-ink); text-decoration:none; border-bottom:1px solid rgba(12,158,143,.3)}
+  footer a:hover{border-bottom-color:var(--teal)}
+
+  /* ---- responsive ---- */
+  @media(max-width:560px){
+    body{font-size:16px}
+    main{padding:0 12px 72px}
+    section.card{padding:22px 18px 26px; border-radius:var(--r-lg); margin:18px 0}
+    .svg-frame{padding:8px; margin:14px -2px; border-radius:var(--r-md)}
+    section h2{font-size:20px}
+    .story{font-size:16px}
+    button{padding:10px 17px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important;
+      transition-duration:.001ms !important}
+    html{scroll-behavior:auto}
+  }
+
+  /* ---- sticky-nav aware scrolling ---- */
+  main > section.card, main > section.card.active, section.card{
+    scroll-margin-top:calc(var(--nav-h, 72px) + 18px);
+  }
+  @media(max-width:860px){ #partNav .pt{display:none} }
+
+  @media(max-width:430px){
+    .badge-tray{gap:7px; flex-wrap:nowrap}
+    .badge{width:38px; height:38px; font-size:18px; flex:0 0 auto}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Jak w głowie policzyć <span class="hl">dzień tygodnia</span> dla dowolnej daty</h1>
+  <p class="subtitle">Bez kalendarza, bez telefonu. Dwa sekrety i trochę praktyki 🧠</p>
+  <p class="subtitle" style="font-size:14.5px; color:var(--soft); margin-top:-8px">
+    Polskie tłumaczenie eksploratora
+    <a href="https://tinkerandsee.com/weekday/" style="color:var(--teal-ink)">Tinker &amp; See</a>
+  </p>
+  <div class="badge-tray" id="badgeTray"></div>
+</header>
+
+<main>
+
+<!-- ============ CZĘŚĆ 1: NIEMOŻLIWA MASZYNA ============ -->
+<section class="card" id="sec1">
+  <span class="part-chip">CZĘŚĆ 1</span>
+  <h2>Umiejętność, którą zaraz podkradniesz ⚡</h2>
+  <p class="story">Niektórzy słyszą dowolną datę i podają dzień tygodnia w <b>dwie sekundy</b>,
+  bez zaglądania do kalendarza.</p>
+  <div class="caption" id="s1cap" style="font-size:19px; text-align:center"></div>
+  <p class="story">To nie jest wkuwanie na pamięć. Są dwie rzeczy do opanowania, a potem trochę praktyki.
+  Na dole tej strony będziesz to potrafił.</p>
+</section>
+
+<!-- ============ CZĘŚĆ 2: ZEGAR DNI ============ -->
+<section class="card" id="sec2">
+  <span class="part-chip">CZĘŚĆ 2</span>
+  <h2>Sekret nr 1: Zegar dni 🕐</h2>
+  <p class="story">Dni tygodnia chodzą w <b class="ref" data-ref="clock">kółko po siedem</b>.
+  Właśnie do tego przydają się reszty z dzielenia.
+  Rozwiąż te trzy zagadki — odpowiedz, zanim sprawdzisz.</p>
+  <div class="svg-frame"><svg id="clockSvg" viewBox="0 0 360 300"></svg></div>
+  <div class="caption" id="s2cap"></div>
+  <div class="btn-row" id="s2quiz"></div>
+  <div class="live-line hidden" id="s2custom"></div>
+  <div id="tableWrap2" class="hidden">
+    <table class="discoveries">
+      <thead><tr>
+        <th class="c-plain">skok</th><th class="c-teal">całe tygodnie<br>do wyrzucenia</th>
+        <th class="c-coral">reszta</th><th class="c-gold">lądujesz w</th>
+      </tr></thead>
+      <tbody id="rows2"></tbody>
+    </table>
+    <div id="patternPrompt2" class="hidden">
+      <p>🔍 Popatrz na tabelę. Skoki o 7 dni, o 70, nawet o 365… co tak naprawdę decyduje, gdzie wylądujesz?</p>
+      <button id="patternBtn2">Liczy się tylko reszta!</button>
+    </div>
+  </div>
+  <div id="leftoverReveal" class="theorem-box hidden">
+    <b>Znalazłeś Sekret nr 1 — Sztuczkę z resztą:</b>
+    <div class="big">wyrzuć całe tygodnie · zostaw tylko <b>resztę (0–6)</b></div>
+    23 dni daje resztę <b>2</b>, więc przejdź 2 kroki. 100 dni też daje resztę <b>2</b>,
+    więc wypada w ten sam dzień. A 365 dni daje resztę <b>1</b> — to przyda się w Części 5.
+  </div>
+</section>
+
+<!-- ============ CZĘŚĆ 3: TAJNA EKIPA ============ -->
+<section class="card" id="sec3">
+  <span class="part-chip">CZĘŚĆ 3</span>
+  <h2>Sekret nr 2: Tajna Ekipa 📅</h2>
+  <p class="story">Oto cały <b id="yearLabel"></b>. Daty zaznaczone na złoto mają coś wspólnego.
+  Kliknij dowolny dzień, żeby sprawdzić to samodzielnie.</p>
+  <div id="squadGroups">
+    <div class="sgroup"><span class="sglabel">Podwójne</span><span class="squad-chips" id="chipsA"></span></div>
+    <div class="sgroup"><span class="sglabel">„od 9 do 5 w 7-11”</span><span class="squad-chips" id="chipsB"></span></div>
+    <div class="sgroup"><span class="sglabel">Dziwaki</span><span class="squad-chips" id="chipsC"></span></div>
+  </div>
+  <div class="caption" id="s3cap"></div>
+  <div class="months" id="monthsGrid"></div>
+  <div class="feedback" id="s3check"></div>
+  <div id="squadReveal" class="theorem-box">
+    <b>Sekret nr 2:</b> w każdym roku wszystkie te daty wypadają w ten sam dzień tygodnia.
+    To <b>dzień-klucz</b> danego roku — w oryginale <i>Doomsday</i>, nazwa od
+    <b>Johna Conwaya</b>, który opublikował tę metodę w 1973 roku
+    (<a href="https://en.wikipedia.org/wiki/Doomsday_rule" target="_blank" rel="noopener">Doomsday rule na Wikipedii ↗</a>).
+    <div class="big" id="bossLine"></div>
+    Zapamiętaj to w dwóch linijkach: <b>podwójne</b> (4/4 · 6/6 · 8/8 · 10/10 · 12/12)
+    + <b>„pracuję od 9 do 5 w sklepie 7-11”</b> (9/5 · 5/9 · 7/11 · 11/7 — każda para działa
+    w obie strony, więc zapis dzień/miesiąc niczego nie psuje).
+    Do tego trzy dziwaki: <b>dzień liczby π — 14/3</b> 🛞, <b>ostatni dzień lutego</b> oraz
+    <b>3/1</b>, a w roku przestępnym <b>4/1</b>, bo luty pożycza wtedy jeden dzień.
+    <br><br>Możesz to sprawdzić na swoim zegarze. Policz dni między nimi:
+    <span id="gapProofs"></span>. Każda przerwa to całkowita liczba tygodni, więc te daty
+    zawsze wypadają w ten sam dzień tygodnia — w każdym roku.
+  </div>
+</section>
+
+<!-- ============ CZĘŚĆ 4: DOWOLNA DATA W TYM ROKU ============ -->
+<section class="card" id="sec4">
+  <span class="part-chip">CZĘŚĆ 4</span>
+  <h2>Pierwsza prawdziwa sztuczka: dowolna data w tym roku 🎯</h2>
+  <p class="story">Znajdź najbliższą datę z ekipy, policz resztę z dni, a potem przejdź tyle kroków
+  od dnia-klucza. Zrobimy jedną razem.</p>
+  <div class="live-line" id="s4helper"></div>
+  <div class="caption" id="s4cap"></div>
+  <div class="btn-row" id="s4controls"></div>
+  <div class="feedback" id="s4fb"></div>
+  <div id="s4practice" class="hidden">
+    <h3 style="margin:14px 0 4px">Teraz Ty. Cztery daty, bez podpowiedzi 💪</h3>
+    <div class="caption" id="s4pcap"></div>
+    <div class="btn-row" id="s4pbtns"></div>
+    <div class="feedback" id="s4pfb"></div>
+  </div>
+</section>
+
+<!-- ============ CZĘŚĆ 5: PODRÓŻ W CZASIE ============ -->
+<section class="card" id="sec5">
+  <span class="part-chip">CZĘŚĆ 5</span>
+  <h2>Podróż w czasie: w jaki dzień się urodziłeś? 🎂</h2>
+  <p class="story">Jeszcze jedna rzecz, którą już znasz: 365 ÷ 7 daje resztę <b>1</b>.
+  Więc z każdym Nowym Rokiem dzień-klucz przesuwa się o <b>1</b> dzień do przodu —
+  albo o <b>2</b>, jeśli w nowym roku wypada 29 lutego:</p>
+  <div id="driftTable"></div>
+  <div id="tm">
+    <h3 style="margin:16px 0 4px">🚀 Wehikuł czasu</h3>
+    <p class="story">Wpisz dowolny rok, a reguła przesunięcia zrobi resztę.</p>
+    <div class="btn-row">
+      <input type="number" id="tmYearInput" min="1900" max="2099" placeholder="np. 1985" style="width:130px">
+      <button class="alt" id="tmStart">Leć w czasie! 🚀</button>
+    </div>
+    <div class="caption hidden" id="tmCap"></div>
+  </div>
+  <details class="blackbelt">
+    <summary>🥋 Czarny pas: skok do dowolnego roku bez liczenia rok po roku (tuziny Conwaya)</summary>
+    <p>Liczenie rok po roku działa, ale 26 kroków to wolno. Conway liczył tuzinami.
+    Tuzin lat to 12 przesunięć plus 3 dni przestępne, czyli 15, a 15 na zegarze siódemkowym
+    daje 1. Czyli <b>jeden tuzin lat przesuwa dzień-klucz o dokładnie jeden dzień.</b></p>
+    <div class="live-line">Wybierz rok: 20<span class="scrub" id="bbScrub">26</span> (przeciągnij liczbę)</div>
+    <div id="bbSteps"></div>
+    <p style="color:var(--soft)">Dla lat 19XX kroki są te same, tylko startujesz ze
+    <b>środy</b> — to dzień-klucz roku 1900 — a nie z wtorku.</p>
+  </details>
+</section>
+
+<!-- ============ CZĘŚĆ 6: WYSTĄP ============ -->
+<section class="card" id="sec6">
+  <span class="part-chip">CZĘŚĆ 6</span>
+  <h2>Wystąp! 🎩</h2>
+  <p class="story">Trzy rundy praktyki. Podpowiedzi znikają w trakcie.</p>
+  <div class="live-line" id="t6helper"></div>
+  <div class="caption" id="t6cap"></div>
+  <div class="btn-row" id="t6days"></div>
+  <div class="feedback" id="t6fb"></div>
+  <div id="historyReveal" class="theorem-box">
+    <b>🎩 Komu za to podziękować:</b> <b>John Conway</b> opublikował
+    <a href="https://en.wikipedia.org/wiki/Doomsday_rule" target="_blank" rel="noopener">regułę Doomsday ↗</a> w <b>1973</b> roku.
+    Żeby nabrać szybkości, ustawił komputer tak, by przy każdym logowaniu pytał go o losową datę —
+    aż zaczął odpowiadać w około dwie sekundy.
+  </div>
+  <div class="teach-grid">
+    <div class="teach-card">
+      <h3>1. Sztuczka z resztą 🕐</h3>
+      Narysuj kółko z siedmioma dniami i skacz po nim.
+      <div class="say">Powiedz: „Dodaj 700 dni do wtorku? Nadal wtorek! Liczy się tylko reszta po wyrzuceniu siódemek.”</div>
+    </div>
+    <div class="teach-card">
+      <h3>2. Tajna Ekipa 📅</h3>
+      Pokaż 4/4, 6/6, 8/8, 10/10, 12/12 w dowolnym kalendarzu, potem 3/1 i dzień liczby π.
+      <div class="say">Powiedz: „Sprawdź je — wszystkie w TEN SAM dzień tygodnia. I «od 9 do 5 w 7-11» też. Każdy rok ma swój dzień-klucz!”</div>
+    </div>
+    <div class="teach-card">
+      <h3>3. Roczne przesunięcie 🎂</h3>
+      Wytłumacz, dlaczego kalendarz się przesuwa.
+      <div class="say">Powiedz: „365 dni = 52 tygodnie + 1 reszty. Dlatego Twoje urodziny przesuwają się o jeden dzień tygodnia co rok — a po roku przestępnym o dwa!”</div>
+    </div>
+    <div class="teach-card">
+      <h3>4. Występ 🎩</h3>
+      Niech ktoś wybierze datę, a potem myśl na głos.
+      <div class="say">Powiedz: „Najbliższa data z ekipy… liczę resztę… przechodzę od dnia-klucza. Dawaj następną!”</div>
+    </div>
+  </div>
+  <p class="story">Wypróbowałeś to na kimś? Podpisz się:</p>
+  <div class="btn-row">
+    <input type="text" id="certName" placeholder="Wpisz tu swoje imię" style="width:230px">
+    <button id="certBtn">Zrób mi certyfikat! 🎩</button>
+  </div>
+  <div id="certificate" class="hidden">
+    <div style="font-size:40px">📅⭐🎩</div>
+    <h2>Certyfikat Kalendarzowej Magii</h2>
+    <p>Niniejszym stwierdza się, że</p>
+    <div class="cname" id="certNameOut"></div>
+    <p>potrafi podać dzień tygodnia <b>dowolnej daty w historii</b>, używając wyłącznie własnej głowy —<br>
+    dzięki Sztuczce z resztą, Tajnej Ekipie i Rocznemu przesunięciu —<br>
+    w tradycji samego Johna Conwaya.</p>
+    <p id="certDate" style="color:var(--soft)"></p>
+    <button class="ghost" id="printBtn">Wydrukuj 🖨️</button>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Polskie tłumaczenie eksploratora
+  <a href="https://tinkerandsee.com/weekday/" style="color:var(--teal)">„How to Mentally Calculate the Day of the Week for Any Date”</a>.
+  Oryginał, projekt i kod: <a href="https://tinkerandsee.com/" style="color:var(--teal)">Tinker &amp; See</a>.
+  Tłumaczenie: Waldemar.
+  <br>
+  <a href="https://ko-fi.com/tinkerandsee" style="color:var(--teal)">☕ Wspieraj autora oryginału</a> ·
+  <a href="https://tinkerandsee.com/" style="color:var(--teal)">🏠 Wszystkie eksploratory (po angielsku)</a>
+</footer>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs, parent){
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function ease(t){ return t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+const TAU = Math.PI*2;
+
+/* ==================================================
+   SŁOWNIK JĘZYKOWY — wszystkie teksty w jednym miejscu
+================================================== */
+const T = {
+  /* mianownik: „12/12 to czwartek” */
+  nom: ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'],
+  /* z przyimkiem „w”: „wypada w czwartek” */
+  w:   ['w niedzielę','w poniedziałek','we wtorek','w środę','w czwartek','w piątek','w sobotę'],
+  /* z przyimkiem „od”: „przejdź od czwartku” */
+  od:  ['od niedzieli','od poniedziałku','od wtorku','od środy','od czwartku','od piątku','od soboty'],
+  short: ['Nd','Pn','Wt','Śr','Cz','Pt','So'],
+  /* mianownik — nagłówki kalendarzy */
+  monNom: ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień',
+           'Wrzesień','Październik','Listopad','Grudzień'],
+  /* dopełniacz — w datach: „20 lipca 1969” */
+  monGen: ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia',
+           'września','października','listopada','grudnia'],
+  /* nagłówki kolumn: tydzień od poniedziałku */
+  hdr: ['P','W','Ś','C','P','S','N'],
+};
+
+/* polska liczba mnoga: 1 tydzień / 2 tygodnie / 5 tygodni */
+const _pr = new Intl.PluralRules('pl');
+const pl = (n, one, few, many) => ({one:one, few:few, many:many, other:many})[_pr.select(n)];
+
+/* ---------- fakty kalendarzowe ---------- */
+const NOW = new Date();
+const YEAR = NOW.getFullYear();
+const DAYS = T.nom;
+const SHORT = T.short;
+const MON = T.monNom;
+const isLeap = y => (y%4===0 && y%100!==0) || y%400===0;
+const mlen = (y,m) => [31, isLeap(y)?29:28, 31,30,31,30,31,31,30,31,30,31][m-1];
+const dow = (y,m,d) => new Date(y, m-1, d).getDay();
+const boss = y => dow(y, 4, 4);
+const anchorFor = (y,m) => ({1:[1, isLeap(y)?4:3], 2:[2, isLeap(y)?29:28], 3:[3,14], 4:[4,4],
+  5:[5,9], 6:[6,6], 7:[7,11], 8:[8,8], 9:[9,5], 10:[10,10], 11:[11,7], 12:[12,12]}[m]);
+
+/* zapis daty po polsku: dzień/miesiąc (klucze wewnętrzne pozostają miesiąc/dzień) */
+const disp = (m,d) => d + '/' + m;
+/* tydzień od poniedziałku: pozycja na zegarze i kolejność przycisków */
+const ORDER = [1,2,3,4,5,6,0];
+const posOf = d => (d+6)%7;
+/* wspólny generator przycisków z dniami, zawsze Pn → Nd */
+function dayButtons(container, cls, onPick){
+  container.innerHTML = '';
+  ORDER.forEach(i=>{
+    const b = document.createElement('button');
+    b.className = cls; b.textContent = SHORT[i]; b.title = T.nom[i];
+    b.onclick = ()=> onPick(i, b);
+    container.appendChild(b);
+  });
+}
+
+/* ---------- toast, fanfara, konfetti, odznaki ---------- */
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+let cheerCtx = null;
+function playCheer(){
+  try{
+    cheerCtx = cheerCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (cheerCtx.state === 'suspended') cheerCtx.resume();
+    const t0 = cheerCtx.currentTime;
+    [[523.25,0],[659.25,.09],[783.99,.18],[1046.5,.28]].forEach(([f,dt])=>{
+      const o = cheerCtx.createOscillator(), gn = cheerCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      gn.gain.setValueAtTime(0.0001, t0+dt);
+      gn.gain.exponentialRampToValueAtTime(0.16, t0+dt+0.02);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t0+dt+0.45);
+      o.connect(gn).connect(cheerCtx.destination);
+      o.start(t0+dt); o.stop(t0+dt+0.5);
+    });
+  }catch(e){}
+}
+function confetti(el){
+  playCheer();
+  const r = el.getBoundingClientRect();
+  const emo = ['🎉','⭐','✨','🎊','💛','🧡'];
+  for (let i=0;i<14;i++){
+    const s = document.createElement('span');
+    s.className = 'confetti-bit';
+    s.textContent = emo[i % emo.length];
+    s.style.left = (r.left + r.width/2 + (Math.random()*160-80)) + 'px';
+    s.style.top  = (r.top + r.height/2 - 10) + 'px';
+    s.style.animationDelay = (Math.random()*0.25)+'s';
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(), 1900);
+  }
+}
+const BADGES = [
+  {id:'clock',  emoji:'🕐', tip:'Mistrz reszty'},
+  {id:'squad',  emoji:'📅', tip:'Odkrywca ekipy'},
+  {id:'date',   emoji:'🎯', tip:'Czarodziej tego roku'},
+  {id:'time',   emoji:'🎂', tip:'Podróżnik w czasie'},
+  {id:'wizard', emoji:'🎩', tip:'Kalendarzowy czarodziej'},
+  {id:'teacher',emoji:'🎓', tip:'Nauczyciel'},
+];
+const earned = {};
+(function renderBadges(){
+  const tray = $('#badgeTray');
+  BADGES.forEach(b=>{
+    const d = document.createElement('div');
+    d.className = 'badge'; d.id = 'badge-'+b.id; d.textContent = b.emoji;
+    d.title = b.tip;
+    tray.appendChild(d);
+  });
+})();
+let award = function(id, msg){
+  if (earned[id]) return;
+  earned[id] = true;
+  const b = $('#badge-'+id);
+  b.classList.add('earned');
+  toast(msg + '  Odznaka ' + b.textContent + ' zdobyta!');
+  confetti(b);
+};
+
+/* ---------- żywe powiązania tekst <-> obrazek ---------- */
+const HL = {};
+(function liveLinks(){
+  let activeRef = null;
+  function fire(el, on){
+    if (!el) return;
+    const sec = el.closest('section');
+    if (sec && HL[sec.id]) HL[sec.id](el.dataset.ref, on);
+  }
+  document.addEventListener('mouseover', e=>{
+    const r = e.target.closest ? e.target.closest('.ref') : null;
+    if (r === activeRef) return;
+    fire(activeRef, false); activeRef = r; fire(r, true);
+  });
+  document.addEventListener('pointerdown', e=>{
+    if (e.pointerType === 'mouse') return;
+    const r = e.target.closest ? e.target.closest('.ref') : null;
+    if (!r) return;
+    fire(r, true); setTimeout(()=> fire(r, false), 2000);
+  });
+})();
+
+/* ==================================================
+   CZĘŚĆ 1 — niemożliwa maszyna
+================================================== */
+(function part1(){
+  const DEMOS = [[1969,7,20],[1879,3,14],[1912,4,15],[2000,1,1],[2030,12,25]];
+  let i = 0, phase = 0;
+  (function tick(){
+    const [y,m,d] = DEMOS[i % DEMOS.length];
+    const label = `${d} ${T.monGen[m-1]} ${y}`;
+    if (phase === 0){
+      $('#s1cap').innerHTML = `\u201E${label}?\u201D`;
+      phase = 1; setTimeout(tick, 1300);
+    } else {
+      $('#s1cap').innerHTML = `\u201E${label}?\u201D &nbsp;\u2014&nbsp; <b>${T.nom[dow(y,m,d)]}.</b>`;
+      phase = 0; i++; setTimeout(tick, 2300);
+    }
+  })();
+})();
+
+/* ==================================================
+   CZĘŚĆ 2 — zegar dni
+================================================== */
+(function part2(){
+  const S = $('#clockSvg'), CX = 180, CY = 152, R = 108;
+  const todayDow = NOW.getDay();
+  let cur = todayDow, animating = false, rows = 0;
+  const nodes = [];
+  for (let i=0;i<7;i++){
+    const a = -Math.PI/2 + posOf(i)*TAU/7;   // poniedziałek na górze
+    const x = CX + R*Math.cos(a), y = CY + R*Math.sin(a);
+    const g = svg('g',{},S);
+    const c = svg('circle',{cx:x, cy:y, r:27, fill: i===todayDow ? '#FFF1CC' : '#FDFBF5',
+      stroke: i===todayDow ? '#FFC53D' : '#D8C9B2', 'stroke-width':3},g);
+    svg('text',{x:x, y:y+5, 'text-anchor':'middle','font-size':13,'font-weight':'bold',
+      'font-family':'inherit', fill:'#3A2E2A'},g).textContent = SHORT[i];
+    if (i===todayDow)
+      svg('text',{x:x, y:y-34, 'text-anchor':'middle','font-size':11,'font-family':'inherit',
+        fill:'#A97800','font-weight':'bold'},g).textContent = 'dziś';
+    nodes.push({x,y,c});
+  }
+  function place(i){
+    nodes.forEach((n,k)=>{
+      n.c.setAttribute('fill', k===todayDow ? '#FFF1CC' : '#FDFBF5');
+      n.c.setAttribute('stroke', k===todayDow ? '#FFC53D' : '#D8C9B2');
+      n.c.setAttribute('stroke-width', 3);
+    });
+    if (i !== null && i !== undefined){
+      nodes[i].c.setAttribute('fill', '#FFE1DC');
+      nodes[i].c.setAttribute('stroke', '#FF6B57');
+      nodes[i].c.setAttribute('stroke-width', 4.5);
+    }
+  }
+  place(null);
+
+  const CH = [23, 100, 365];
+  let chIdx = 0, guess = null;
+  function quiz(){
+    const q = $('#s2quiz'); q.innerHTML = '';
+    if (chIdx < CH.length){
+      const jump = CH[chIdx];
+      $('#s2cap').innerHTML = `<b>Zagadka ${chIdx+1} z ${CH.length}:</b> dziś jest <b>${T.nom[todayDow]}</b>. ` +
+        `Jaki dzień wypadnie za <b>${jump} ${pl(jump,'dzień','dni','dni')}</b>? ` +
+        (chIdx===0 ? 'Policz, a potem wybierz:' : 'Skrót już znasz:');
+      dayButtons(q, 'ghost day', i => tryJump(jump, i));
+    } else {
+      $('#s2cap').innerHTML = 'Wypróbuj własne skoki poniżej, a potem popatrz na tabelę.';
+      $('#s2custom').classList.remove('hidden');
+      customLine();
+    }
+  }
+  function tryJump(jump, guessed){
+    if (animating) return;
+    guess = guessed;
+    animate(jump, ()=>{
+      const land = (todayDow + jump) % 7;
+      const ok = guessed === land;
+      addRow(jump, land);
+      $('#s2cap').innerHTML = (ok ? `🎯 <b>${T.nom[land]}</b>. Zgadza się.` :
+        `Wypada ${T.w[land]}. Ty wybrałeś: ${T.nom[guessed]}.`) +
+        ` &nbsp;<button class="alt" id="nextCh">Dalej ▶</button>`;
+      $('#s2quiz').innerHTML = '';
+      $('#nextCh').onclick = ()=>{ chIdx++; quiz(); };
+      if (ok) playCheer();
+    });
+  }
+  function animate(steps, done){
+    // bez skakania po kolei: ląduj od razu i podświetl dzień docelowy
+    nodes.forEach(n=> n.c.classList.remove('svg-glow'));
+    cur = (todayDow + steps) % 7;
+    place(cur);
+    nodes[cur].c.classList.add('svg-glow');
+    setTimeout(()=> nodes[cur].c.classList.remove('svg-glow'), 1400);
+    done();
+  }
+  function addRow(jump, land){
+    $('#tableWrap2').classList.remove('hidden');
+    const weeks = Math.floor(jump/7), left = jump%7;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>+${jump}</td><td>${weeks} ${pl(weeks,'tydzień','tygodnie','tygodni')} (${weeks*7})</td>` +
+      `<td><b>${left}</b></td><td><b>${SHORT[land]}</b></td>`;
+    $('#rows2').appendChild(tr);
+    rows++;
+    if (rows >= 3) $('#patternPrompt2').classList.remove('hidden');
+  }
+  let jumpN = 100;
+  function customLine(){
+    $('#s2custom').innerHTML = `Wybierz skok: <span class="scrub" id="jumpScrub">+${jumpN}</span> dni ` +
+      `<button class="alt" id="jumpGo" style="margin-left:8px">Skacz!</button>`;
+    $('#jumpGo').onclick = ()=>{
+      if (animating) return;
+      animate(jumpN, ()=> addRow(jumpN, (todayDow+jumpN)%7));
+    };
+  }
+  let scrub = null;
+  document.addEventListener('pointerdown', e=>{
+    const t = e.target.closest ? e.target.closest('#jumpScrub') : null;
+    if (!t) return;
+    scrub = {x:e.clientX, v:jumpN};
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e=>{
+    if (!scrub) return;
+    const nv = Math.max(1, Math.min(999, scrub.v + Math.round((e.clientX-scrub.x)/3)));
+    if (nv !== jumpN){ jumpN = nv; customLine(); }
+  });
+  document.addEventListener('pointerup', ()=> scrub = null);
+
+  $('#patternBtn2').addEventListener('click', ()=>{
+    $('#leftoverReveal').classList.remove('hidden');
+    $('#patternPrompt2').classList.add('hidden');
+    award('clock','Odkryłeś Sztuczkę z resztą!');
+    $('#leftoverReveal').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+  HL.sec2 = (key,on)=>{ if (key==='clock') S.classList.toggle('svg-glow', on); };
+  quiz();
+})();
+
+/* ==================================================
+   CZĘŚĆ 3 — tajna ekipa
+================================================== */
+(function part3(){
+  $('#yearLabel').textContent = 'rok ' + YEAR;
+  const DOUBLES = [[4,4],[6,6],[8,8],[10,10],[12,12]];
+  const GANG = [[9,5],[5,9],[7,11],[11,7]];
+  const WEIRD = [[1, isLeap(YEAR) ? 4 : 3],[3,14],[2, mlen(YEAR,2)]];
+  const GROUPS = [
+    {list:DOUBLES, wrap:'chipsA', name:'podwójne'},
+    {list:GANG,    wrap:'chipsB', name:'ekipa od 9 do 5'},
+    {list:WEIRD,   wrap:'chipsC', name:'dziwaki'},
+  ];
+  const SQUAD = [...DOUBLES, ...GANG, ...WEIRD];
+  const key = (m,d)=> m+'/'+d;          // klucz wewnętrzny — NIE zmieniać
+  const squadSet = new Set(SQUAD.map(([m,d])=>key(m,d)));
+  const tapped = new Set();
+  const done = true;   // ekipa jest podświetlona od początku
+
+  // znaczniki ekipy, pogrupowane (klik przenosi do daty w kalendarzu)
+  const chipEls = {};
+  GROUPS.forEach(g=>{
+    g.list.forEach(([m,d])=>{
+      const b = document.createElement('button');
+      b.className = 'schip'; b.textContent = disp(m,d);
+      b.onclick = ()=>{
+        const cell = document.querySelector(`.dc[data-md="${key(m,d)}"]`);
+        if (cell){ cell.scrollIntoView({behavior:'smooth', block:'center'}); flash(cell); }
+      };
+      document.getElementById(g.wrap).appendChild(b);
+      chipEls[key(m,d)] = b;
+    });
+  });
+
+  // 12 klikalnych kalendarzy miesięcznych, tydzień od poniedziałku
+  const grid = $('#monthsGrid');
+  for (let m=1;m<=12;m++){
+    const mon = document.createElement('div');
+    mon.className = 'mon';
+    mon.innerHTML = `<h4>${T.monNom[m-1]}</h4>`;
+    const g = document.createElement('div');
+    g.className = 'mgrid';
+    T.hdr.forEach(ch=>{
+      const dh = document.createElement('div'); dh.className='dh'; dh.textContent = ch; g.appendChild(dh);
+    });
+    const first = (dow(YEAR,m,1) + 6) % 7;   // 0 = poniedziałek
+    for (let i=0;i<first;i++) g.appendChild(document.createElement('div'));
+    for (let d=1; d<=mlen(YEAR,m); d++){
+      const c = document.createElement('div');
+      c.className = 'dc'; c.textContent = d; c.dataset.md = key(m,d);
+      c.addEventListener('click', ()=> tap(m,d,c));
+      g.appendChild(c);
+    }
+    mon.appendChild(g);
+    grid.appendChild(mon);
+  }
+  function flash(cell){
+    cell.classList.add('flash');
+    setTimeout(()=>cell.classList.remove('flash'), 1200);
+  }
+  function mark(m,d){
+    if (tapped.has(key(m,d))) return;
+    tapped.add(key(m,d));
+    const cell = document.querySelector(`.dc[data-md="${key(m,d)}"]`);
+    if (cell) cell.classList.add('sq');
+    chipEls[key(m,d)].classList.add('got');
+  }
+  function tap(m,d,cell){
+    const w = dow(YEAR,m,d);
+    flash(cell);
+    const chk = $('#s3check');
+    if (squadSet.has(key(m,d))){
+      chk.innerHTML = `✓ <b>${disp(m,d)}</b> wypada ${T.w[w]}.`;
+      chk.className = 'feedback good';
+    } else {
+      chk.innerHTML = `<b>${disp(m,d)}</b> wypada ${T.w[w]}. To nie data z ekipy, więc nie musi się zgadzać.`;
+      chk.className = 'feedback';
+    }
+  }
+  function caption(){
+    $('#s3cap').innerHTML = `Wszystkie <b>${SQUAD.length}</b> złotych dat wypada ${T.w[boss(YEAR)]} ` +
+      `w tym roku — po jednej w każdym miesiącu. Oto dlaczego.`;
+  }
+  function fillReveal(){
+    const B = boss(YEAR);
+    $('#bossLine').innerHTML = `Dzień-klucz roku ${YEAR} to <b>${T.nom[B]}</b>`;
+    const gaps = [[[4,4],[6,6]],[[6,6],[8,8]],[[8,8],[10,10]],[[10,10],[12,12]],[[9,5],[10,10]]];
+    $('#gapProofs').innerHTML = gaps.map(([[m1,d1],[m2,d2]])=>{
+      const n = Math.round((new Date(YEAR,m2-1,d2) - new Date(YEAR,m1-1,d1))/864e5);
+      return `${disp(m1,d1)}→${disp(m2,d2)}: <b>${n}</b> = ${n/7} ${pl(n/7,'tydzień','tygodnie','tygodni')} ✓`;
+    }).join(' · ');
+  }
+  SQUAD.forEach(([m,d])=> mark(m,d));
+  caption();
+  fillReveal();
+  // odznaka wpada, gdy czytelnik naprawdę dotrze do sekcji
+  if (window.IntersectionObserver){
+    const io = new IntersectionObserver(es=>{
+      es.forEach(e=>{ if (e.isIntersecting){ award('squad','Poznałeś Tajną Ekipę!'); io.disconnect(); } });
+    }, {threshold:.35});
+    io.observe(document.getElementById('sec3'));
+  } else award('squad','Poznałeś Tajną Ekipę!');
+})();
+
+/* ==================================================
+   CZĘŚĆ 4 — dowolna data w tym roku
+================================================== */
+(function part4(){
+  const B = boss(YEAR);
+  $('#s4helper').innerHTML = `🧰 Twoje narzędzia — dzień-klucz ${YEAR}: <b>${T.nom[B]}</b> · ` +
+    `Ekipa: <b>4/4 · 6/6 · 8/8 · 10/10 · 12/12 · 5/9 · 9/5 · 11/7 · 7/11 · 14/3 · ostatni dzień lutego · ${isLeap(YEAR)?4:3}/1</b> · ` +
+    `(Zegar dni czeka w Części 2, gdy będzie potrzebny)`;
+  let step = 0;
+  const cap = $('#s4cap'), ctl = $('#s4controls'), fb = $('#s4fb');
+  const XM = 12, XD = 25;   // Boże Narodzenie
+  function render(){
+    ctl.innerHTML = ''; fb.textContent = ''; fb.className = 'feedback';
+    if (step === 0){
+      cap.innerHTML = `Znajdźmy <b>Boże Narodzenie — 25/12/${YEAR}</b> — bez kalendarza.`;
+      btn('Zróbmy to razem 🎄','alt', ()=>{ step=1; render(); });
+    } else if (step === 1){
+      cap.innerHTML = `Krok 1: która <b>data z ekipy</b> mieszka najbliżej 25/12?`;
+      [[12,12],[10,10],[11,7]].forEach(([m,d])=>{
+        btn(disp(m,d),'ghost',()=>{
+          if (m===12 && d===12){ step=2; render(); }
+          else { fb.textContent = 'Bliżej! Która data z ekipy jest w TYM SAMYM miesiącu?'; fb.className='feedback try'; }
+        });
+      });
+    } else if (step === 2){
+      cap.innerHTML = `Krok 2: od <b>12/12</b> ile dni do przodu do <b>25/12</b>?`;
+      numAsk(13, ()=>{ step=3; render(); }, '25 − 12 = ?');
+    } else if (step === 3){
+      cap.innerHTML = `Krok 3: <b>13 dni</b> — wyrzuć całe tygodnie. Jaka zostaje <b>reszta</b>?`;
+      numAsk(6, ()=>{ step=4; render(); }, '13 = 7 + 6. Wyrzuć siódemkę…');
+    } else if (step === 4){
+      cap.innerHTML = `Krok 4: dzień-klucz to <b>${T.nom[B]}</b>, przejdź <b>6</b> kroków po zegarze. Boże Narodzenie ${YEAR} wypada w…`;
+      dayButtons(ctl, 'ghost day', i=>{
+        if (i === dow(YEAR,XM,XD)){
+          step = 5; cap.innerHTML = `🎄 <b>${T.nom[i]}!</b> Właśnie policzyłeś prawdziwą datę w głowie — z podpowiedziami. Teraz solo:`;
+          ctl.innerHTML = '';
+          confetti($('#s4controls'));
+          $('#s4practice').classList.remove('hidden');
+          practice();
+        } else {
+          fb.textContent = 'Przejdź to po zegarze: ' + T.nom[B] + ' + 6 kroków…'; fb.className='feedback try';
+        }
+      });
+    }
+  }
+  function btn(label, cls, on){
+    const b = document.createElement('button');
+    b.className = cls; b.textContent = label; b.onclick = on;
+    ctl.appendChild(b);
+  }
+  function numAsk(target, ok, hint){
+    const i = document.createElement('input');
+    i.type = 'number'; i.placeholder = '?';
+    ctl.appendChild(i);
+    btn('Sprawdź!','alt',()=>{
+      if (parseInt(i.value,10) === target){ playCheer(); ok(); }
+      else { fb.textContent = hint; fb.className='feedback try';
+        i.classList.add('shake'); setTimeout(()=>i.classList.remove('shake'),450); }
+    });
+  }
+  // ćwiczenia solo
+  const PRACTICE = [[10,31,'Halloween 🎃'],[9,1,'(uwaga — jest PRZED swoją datą z ekipy)'],[5,23,''],[7,30,'']];
+  let pi = 0, correct = 0;
+  function practice(){
+    const fb2 = $('#s4pfb'); fb2.textContent=''; fb2.className='feedback';
+    if (pi >= PRACTICE.length){
+      $('#s4pcap').innerHTML = `<b>${correct} z ${PRACTICE.length}.</b> ` +
+        (correct>=3 ? 'Ten rok masz opanowany.' : 'Zerknij jeszcze raz na rozwiązany przykład i spróbuj ponownie.');
+      $('#s4pbtns').innerHTML = '';
+      if (correct >= 3) award('date','Policzysz każdą datę w tym roku!');
+      return;
+    }
+    const [m,d,nick] = PRACTICE[pi];
+    $('#s4pcap').innerHTML = `Data ${pi+1} z ${PRACTICE.length}: <b>${disp(m,d)}/${YEAR}</b> ${nick}`;
+    dayButtons($('#s4pbtns'), 'ghost day', i=>{
+      const [am,ad] = anchorFor(YEAR,m);
+      const truth = dow(YEAR,m,d);
+      if (i === truth){
+        correct++;
+        fb2.innerHTML = `🎉 Tak — <b>${T.nom[truth]}</b>! (${disp(am,ad)} jest z ekipy, ${d-ad>=0?'+':''}${d-ad} dni, reszta ${((d-ad)%7+7)%7}.)`;
+        fb2.className = 'feedback good';
+        playCheer();
+      } else {
+        fb2.innerHTML = `Wypada ${T.w[truth]}. Ruch: data z ekipy ${disp(am,ad)} → ${d-ad>=0?'+':''}${d-ad} dni → reszta ${((d-ad)%7+7)%7} → przejdź ${T.od[boss(YEAR)]}.`;
+        fb2.className = 'feedback try';
+      }
+      pi++;
+      setTimeout(practice, 2600);
+    });
+  }
+  render();
+})();
+
+/* ==================================================
+   CZĘŚĆ 5 — podróż w czasie
+================================================== */
+(function part5(){
+  // tabela przesunięć — widoczna od początku
+  let html = '<table class="discoveries"><thead><tr><th class="c-plain">rok</th>' +
+    '<th class="c-teal">przestępny?</th><th class="c-gold">dzień-klucz</th>' +
+    '<th class="c-coral">przesunięcie</th></tr></thead><tbody>';
+  for (let y=YEAR-3; y<=YEAR+1; y++){
+    const slide = y===YEAR-3 ? '' : (isLeap(y) ? '+2 (przestępny!)' : '+1');
+    html += `<tr><td>${y}</td><td>${isLeap(y)?'🐸 tak':'nie'}</td><td><b>${T.nom[boss(y)]}</b></td><td>${slide}</td></tr>`;
+  }
+  $('#driftTable').innerHTML = html + '</tbody></table>';
+
+  // wehikuł czasu: podaj ROK, dostaniesz jego dzień-klucz — z pokazanym rachunkiem
+  $('#tmStart').addEventListener('click', ()=>{
+    const y = parseInt($('#tmYearInput').value, 10);
+    if (isNaN(y) || y < 1900 || y > 2099){ toast('Wpisz rok z zakresu 1900–2099'); return; }
+    const cap = $('#tmCap');
+    cap.classList.remove('hidden');
+    if (y === YEAR){
+      cap.innerHTML = `Jesteś już w roku ${YEAR} — jego dzień-klucz to <b>${T.nom[boss(YEAR)]}</b>.`;
+      return;
+    }
+    const back = y < YEAR;
+    const lo = Math.min(y, YEAR), hi = Math.max(y, YEAR);
+    let leaps = 0;
+    for (let z = lo+1; z <= hi; z++) if (isLeap(z)) leaps++;
+    const diff = hi - lo, total = diff + leaps, left = total % 7;
+    const B = boss(YEAR);
+    const result = back ? ((B - left) % 7 + 7) % 7 : (B + left) % 7;
+    const check = result === boss(y) ? '✓ zgadza się z prawdziwym kalendarzem' : '✗';
+    cap.innerHTML = `🛬 <b>${y}</b> — dzień-klucz: <b>${T.nom[result]}</b> <span style="color:var(--teal)">${check}</span>` +
+      `<br><span style="color:var(--soft)">Rachunek: ${diff} ${pl(diff,'rok','lata','lat')} ${back?'w tył':'w przód'}, po drodze ` +
+      `<b>${leaps}</b> ${pl(leaps,'dzień przestępny','dni przestępne','dni przestępnych')} 🐸 → ${diff} + ${leaps} = <b>${total}</b> ` +
+      `${pl(total,'przesunięcie','przesunięcia','przesunięć')} → reszta <b>${left}</b> → ` +
+      `${T.nom[B]} ${back?'−':'+'} ${left} = <b>${T.nom[result]}</b>.</span>` +
+      `<br>Teraz policzysz dowolną datę w roku ${y}. Spróbuj z czyimiś urodzinami.`;
+    confetti($('#tmStart'));
+    award('time', 'Znajdziesz dzień-klucz każdego roku!');
+  });
+})();
+
+/* ==================================================
+   CZARNY PAS — tuziny Conwaya, krok po kroku
+================================================== */
+(function blackbelt(){
+  let bbYY = 26;
+  function renderBB(){
+    const Q = Math.floor(bbYY/12), Rr = bbYY%12, S = Math.floor(Rr/4);
+    const total = Q+Rr+S, left = total%7, result = (2+total)%7;
+    const check = result === dow(2000+bbYY, 4, 4);
+    $('#bbSteps').innerHTML =
+      `<table class="discoveries"><tbody>` +
+      `<tr><td style="text-align:left">Tuziny w liczbie ${bbYY} <span style="color:var(--soft)">(każdy = +1 przesunięcie)</span></td><td><b>Q = ${Q}</b></td><td>+${Q}</td></tr>` +
+      `<tr><td style="text-align:left">Lata poza tuzinami <span style="color:var(--soft)">(każdy = +1 przesunięcie)</span></td><td><b>R = ${Rr}</b></td><td>+${Rr}</td></tr>` +
+      `<tr><td style="text-align:left">Dni przestępne ukryte w tych ${Rr} <span style="color:var(--soft)">(R ÷ 4, resztę odrzuć — każdy = +1 dodatkowo)</span></td><td><b>S = ${S}</b></td><td>+${S}</td></tr>` +
+      `<tr><td style="text-align:left"><b>Łączne przesunięcie od roku 2000</b></td><td>${Q}+${Rr}+${S}</td><td><b>${total}</b>${total>6 ? ` → reszta <b>${left}</b>` : ''}</td></tr>` +
+      `<tr><td style="text-align:left">Dzień-klucz roku 2000 to <b>wtorek</b> — przejdź ${left} ${pl(left,'krok','kroki','kroków')}</td><td colspan="2"><b>${T.nom[result]}</b> ${check ? '✓ sprawdzone' : ''}</td></tr>` +
+      `</tbody></table>`;
+  }
+  renderBB();
+  let bbScrub = null;
+  document.addEventListener('pointerdown', e=>{
+    const t = e.target.closest ? e.target.closest('#bbScrub') : null;
+    if (!t) return;
+    bbScrub = {x:e.clientX, v:bbYY};
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e=>{
+    if (!bbScrub) return;
+    const nv = Math.max(0, Math.min(99, bbScrub.v + Math.round((e.clientX-bbScrub.x)/8)));
+    if (nv !== bbYY){
+      bbYY = nv;
+      document.querySelector('#bbScrub').textContent = String(bbYY).padStart(2,'0');
+      renderBB();
+    }
+  });
+  document.addEventListener('pointerup', ()=> bbScrub = null);
+})();
+
+/* ==================================================
+   CZĘŚĆ 6 — wystąp
+================================================== */
+(function part6(){
+  let round = 1, correct = 0, q = null, t0 = 0;
+  const B = boss(YEAR);
+  function helper(){
+    const h = $('#t6helper');
+    if (round === 1) h.innerHTML = `🧰 Runda 1, podpowiedzi — dzień-klucz: <b>${T.nom[B]}</b> · Ekipa: <b>4/4 6/6 8/8 10/10 12/12 · 5/9 9/5 11/7 7/11 · 14/3 · ostatni dzień lutego · ${isLeap(YEAR)?4:3}/1</b>`;
+    else if (round === 2) h.innerHTML = `🧰 Runda 2 — podpowiedzi blakną! Zostaje dzień-klucz: <b>${T.nom[B]}</b>`;
+    else h.innerHTML = `🧰 Runda 3 — bez podpowiedzi. Tylko Ty i zegar w Twojej głowie. ⏱ na czas!`;
+  }
+  function ask(){
+    helper();
+    const m = 1 + Math.floor(Math.random()*12);
+    const d = 1 + Math.floor(Math.random()*mlen(YEAR,m));
+    q = {m,d};
+    t0 = performance.now();
+    $('#t6cap').innerHTML = `<b>Runda ${round}</b> (${correct}/3) — w jaki dzień wypada <b>${disp(m,d)}/${YEAR}</b>?`;
+    dayButtons($('#t6days'), 'ghost day', (i,b)=> answer(i,b));
+  }
+  function answer(i, el){
+    const truth = dow(YEAR, q.m, q.d);
+    const secs = ((performance.now()-t0)/1000).toFixed(1);
+    const fb = $('#t6fb');
+    if (i === truth){
+      correct++;
+      fb.innerHTML = `🎯 <b>${T.nom[truth]}</b>! ${round===3 ? '⏱ '+secs+' s (Conway: ~2 s — cel życia)' : ''}`;
+      fb.className = 'feedback good';
+      playCheer();
+      if (correct >= 3){
+        round++; correct = 0;
+        if (round > 3){
+          $('#t6cap').innerHTML = '🏆 <b>Trzy rundy, bez podpowiedzi.</b> ' +
+            'Znajdź kogoś i poproś o datę.';
+          $('#t6days').innerHTML = ''; $('#t6helper').innerHTML = '';
+          award('wizard','Trzy rundy — teraz TY jesteś maszyną!');
+          confetti(el);
+          return;
+        }
+        toast('Kolejna runda! Podpowiedzi blakną… 🎩');
+      }
+    } else {
+      const [am,ad] = anchorFor(YEAR,q.m);
+      fb.innerHTML = `Wypada ${T.w[truth]} — (ekipa ${disp(am,ad)}, ${q.d-ad>=0?'+':''}${q.d-ad}, reszta ${((q.d-ad)%7+7)%7}, przejdź ${T.od[B]}).`;
+      fb.className = 'feedback try';
+    }
+    setTimeout(ask, i===truth ? 900 : 3000);
+  }
+  ask();
+
+  $('#certBtn').addEventListener('click', ()=>{
+    const name = $('#certName').value.trim();
+    if (!name){ toast('Najpierw wpisz swoje imię! ✏️'); $('#certName').focus(); return; }
+    $('#certNameOut').textContent = name;
+    $('#certDate').textContent = 'Wydano ' + new Date().toLocaleDateString('pl-PL',
+      {year:'numeric', month:'long', day:'numeric'}) + ' (' + T.w[NOW.getDay()] + ', oczywiście)';
+    $('#certificate').classList.remove('hidden');
+    award('teacher', name + ' — certyfikowany Kalendarzowy Czarodziej!');
+    confetti($('#certBtn'));
+    $('#certificate').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+  $('#printBtn').addEventListener('click', ()=>{
+    document.body.classList.add('print-cert');
+    window.print();
+    setTimeout(()=>document.body.classList.remove('print-cert'), 500);
+  });
+})();
+
+/* ==================================================
+   NAWIGACJA ŚLEDZĄCA PRZEWIJANIE — jedna strona, bez blokad
+================================================== */
+(function scrollNav(){
+  const PARTS = [
+    {id:'sec1', title:'Umiejętność', emoji:'⚡', badge:null},
+    {id:'sec2', title:'Zegar',       emoji:'🕐', badge:'clock'},
+    {id:'sec3', title:'Ekipa',       emoji:'📅', badge:'squad'},
+    {id:'sec4', title:'Ten rok',     emoji:'🎯', badge:'date'},
+    {id:'sec5', title:'Podróż',      emoji:'🎂', badge:'time'},
+    {id:'sec6', title:'Występ',      emoji:'🎩', badge:'wizard'},
+  ];
+  let cur = 0;
+  const nav = document.createElement('nav');
+  nav.id = 'partNav';
+  document.querySelector('main').before(nav);
+  function renderNav(){
+    nav.innerHTML = '';
+    const home = document.createElement('a');
+    home.className = 'pchip'; home.href = 'https://tinkerandsee.com/';
+    home.title = 'Wszystkie eksploratory na tinkerandsee.com (po angielsku)';
+    home.textContent = '🏠';
+    nav.appendChild(home);
+    PARTS.forEach((p,i)=>{
+      const btn = document.createElement('button');
+      btn.className = 'pchip' + (i===cur ? ' current' : '');
+      const done = p.badge && earned[p.badge];
+      btn.innerHTML = (done ? '⭐' : p.emoji) + ' ' + (i+1) + '<span class="pt"> · ' + p.title + '</span>';
+      btn.title = 'Część ' + (i+1) + ': ' + p.title;
+      btn.onclick = ()=> document.getElementById(p.id).scrollIntoView({behavior:'smooth', block:'start'});
+      nav.appendChild(btn);
+    });
+  }
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if (en.isIntersecting){
+        cur = PARTS.findIndex(p=>p.id === en.target.id);
+        renderNav();
+      }
+    });
+  }, {rootMargin:'-40% 0px -55% 0px'});
+  PARTS.forEach(p=> obs.observe(document.getElementById(p.id)));
+  const prevAward = award;
+  award = function(id, msg){ prevAward(id, msg); renderNav(); };
+  renderNav();
+})();
+
+/* utrzymuj --nav-h zgodnie z wysokością przyklejonej nawigacji,
+   żeby skok nigdy nie schował nagłówka */
+(function navHeightVar(){
+  const nav = document.getElementById('partNav');
+  if (!nav) return;
+  const set = ()=> document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+  set();
+  if (window.ResizeObserver) new ResizeObserver(set).observe(nav);
+  window.addEventListener('resize', set);
+})();
+</script>
+</body>
+</html>
